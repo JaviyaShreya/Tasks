@@ -54,11 +54,11 @@ function getdataById(req,res){
             const item = dataArr.find(i=>i.id===id)
             if(item){
                 res.writeHead(200,{'content-type':'application/json'})
-                res.end(JSON.stringify(item))
+                return res.end(JSON.stringify(item))
             }
             else{
                 res.writeHead(404,{'content-type':'application/json'})
-                res.end(JSON.stringify({message:"Item not found"}))         
+                return res.end(JSON.stringify({message:"Item not found"}))         
             }
         })
     }

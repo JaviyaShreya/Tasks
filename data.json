@@ -1,1 +1,46 @@
-[{"id":1,"itemname":"Purse","quantity":5,"price":10000,"status":"Not Available","createdAt":"22/3/25","updatedAt":"25/3/25"},{"id":2,"itemname":"Watch","quantity":5,"price":10000,"status":"Not Available","createdAt":"22/3/25","updatedAt":"25/3/25"},{"id":3,"itemname":"Mobile","quantity":10,"price":20000,"status":"Available","createdAt":"22/3/25","updatedAt":"25/3/25"},{"id":5,"itemname":"Charger","quantity":8,"price":6000,"status":" not Available","createdAt":"22/3/25","updatedAt":"25/3/25"},{"item":"purse","price":1000,"quantity":50,"status":"not available","id":"a63dffbd-b1d3-4c4b-935b-701bedc521a6","updatedAt":"26/3/2025"}]
+[
+  {
+    "id": 1,
+    "itemname": "Purse",
+    "quantity": 5,
+    "price": 10000,
+    "status": "Not Available",
+    "createdAt": "22/3/25",
+    "updatedAt": "25/3/25"
+  },
+  {
+    "id": 2,
+    "itemname": "Watch",
+    "quantity": 5,
+    "price": 10000,
+    "status": "Not Available",
+    "createdAt": "22/3/25",
+    "updatedAt": "25/3/25"
+  },
+  {
+    "id": 3,
+    "itemname": "Mobile",
+    "quantity": 10,
+    "price": 20000,
+    "status": "Available",
+    "createdAt": "22/3/25",
+    "updatedAt": "25/3/25"
+  },
+  {
+    "id": 5,
+    "itemname": "Charger",
+    "quantity": 8,
+    "price": 6000,
+    "status": " not Available",
+    "createdAt": "22/3/25",
+    "updatedAt": "25/3/25"
+  },
+  {
+    "item": "purse",
+    "price": 1000,
+    "quantity": 50,
+    "status": "not available",
+    "id": "a63dffbd-b1d3-4c4b-935b-701bedc521a6",
+    "updatedAt": "26/3/2025"
+  }
+]

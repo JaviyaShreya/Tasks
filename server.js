@@ -21,7 +21,7 @@ const myServer = http.createServer((req,res)=>{
     }
     if (!publicroutes(req, res) && !dataroutes(req, res)) {
         res.writeHead(404, { 'content-type': 'application/json' });
-        return es.end(JSON.stringify({ message: "Route not found" }));
+        return res.end(JSON.stringify({ message: "Route not found" }));
     }
     // else{
     //     res.writeHead(404,{'Content-Type':'application/json'})

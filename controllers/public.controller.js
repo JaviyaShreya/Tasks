@@ -1,6 +1,3 @@
-
-
-
 function servePublic(req,res){
     const filepath = path.join(__dirname, '../public', req.url);
     console.log(filepath)

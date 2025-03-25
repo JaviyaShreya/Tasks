@@ -4,43 +4,35 @@ const { v4: uuidv4 } = require('uuid')
 const { validate: uuidValidate } = require('uuid')
 const url = require('url')
 const {event} = require('../utils/eventhandler')
+const {createResponse, validateData, validateId} = require('../helpers/helper')
 
 
 function getAlldata(req,res){
     try{
-        fs.readFile('data.json',(err,data)=>{
+        fs.readFile('data.json',(err,odata)=>{
             
          if(err){
              if(err.code==="ENOENT"){
-                res.writeHead(200,{'content-type':'application/json'})
-                res.end(JSON.stringify({message:"Data not found"}))
-                return
+                return createResponse({res, nstatuscode:404, sMessage:"Data not found"})
             }
             else{
-                res.writeHead(200,{'content-type':'application/json'})
-                res.end(JSON.stringify({message:"Error while reading data"}))
-                return
+                return createResponse({res, nstatuscode:500, sMessage:"Error while reading data"})
             }
          }
-        res.writeHead(200,{'Content-Type':'application/json'})
-         res.end(JSON.stringify(JSON.parse(data)))
+        return createResponse({res, nstatuscode:200, oData:JSON.parse(odata)})
         })
      }
      catch(err){
-        res.end(err.message)
+        return createResponse({res, nstatuscode:500, sMessage:err.message})
      }
 }
 
 function getdataById(req,res){
     try{
-        const id = req.url.split('/')[3]
+        const iId = req.url.split('/')[3]
         //to check if the id is valid
-        if(!uuidValidate(id)){
-            res.writeHead(400,{'content-type':'application/json'})
-            res.end(JSON.stringify({message:"Invalid ID"}))
-            return
-        }
-        fs.readFile('data.json',(err,data)=>{
+        validateId(res,iId)
+        fs.readFile('data.json',(err,odata)=>{
             if(err){
                 if(err.code==="ENOENT"){
                     return res.end(JSON.stringify({message:"Data not found"}))
@@ -49,9 +41,9 @@ function getdataById(req,res){
                     return res.end(JSON.stringify({message:"Error while reading data"}))
                 }
             }
-            const dataArr = JSON.parse(data)
+            const odataArr = JSON.parse(odata)
             //to find the data of the given id
-            const item = dataArr.find(i=>i.id===id)
+            const item = odataArr.find(i=>i.id===id)
             if(item){
                 res.writeHead(200,{'content-type':'application/json'})
                 return res.end(JSON.stringify(item))
@@ -69,7 +61,7 @@ function getdataById(req,res){
 
 function addData(req,res){
     try{
-        fs.readFile('data.json',(err,data)=>{
+        fs.readFile('data.json',(err,odata)=>{
             if(err){
                 if(err.code==="ENOENT"){
                     return res.end(JSON.stringify({message:"Data not found"}))
@@ -80,7 +72,7 @@ function addData(req,res){
                 }
             }
              //store the already existing data in json file
-            const oldata = Array.from(JSON.parse(data.toString('utf-8')))
+            const ooldata = Array.from(JSON.parse(odata.toString('utf-8')))
             let body = ''
          
             req.on('data',chunk=>{
@@ -91,19 +83,19 @@ function addData(req,res){
                     res.writeHead(400, { 'content-type': 'application/json' });
                     return res.end(JSON.stringify({ message: "Enter valid data" }));
                 }
-                const newdata = JSON.parse(body)
+                const onewdata = JSON.parse(body)
 
                 //to check if the object is emnpty
-                if(Object.keys(newdata).length===0){
+                if(Object.keys(onewdata).length===0){
                     res.writeHead(400,{'content-type':'application/json'})
                     return res.end(JSON.stringify({message:"Enter valid data"}))
                 }
                 //takes random id from uuid
-                newdata.id = uuidv4()
+                onewdata.id = uuidv4()
                 //push the new data to the existing data
-                oldata.push(newdata)
+                ooldata.push(onewdata)
                
-                fs.writeFile('data.json',JSON.stringify(oldata),(err)=>{
+                fs.writeFile('data.json',JSON.stringify(ooldata),(err)=>{
                     if(err){
                         if(err.code==="ENOENT"){
                             return res.end(JSON.stringify({message:"Data not found"}))
@@ -114,7 +106,7 @@ function addData(req,res){
                     }
                     event.emit('itemCreated')
                     res.writeHead(201,{'content-type':'application/json'})
-                    res.end(JSON.stringify({message:"Data Created Successfully",data:newdata}))
+                    res.end(JSON.stringify({message:"Data Created Successfully",odata:onewdata}))
                 })
              
             })
@@ -136,7 +128,7 @@ function updateData(req,res){
             return
         }
     
-        fs.readFile('data.json',(err,data)=>{
+        fs.readFile('data.json',(err,odata)=>{
             if(err){
                 if(err.code==="ENOENT"){
                     res.end(JSON.stringify({message:"Data not found"}))
@@ -146,9 +138,9 @@ function updateData(req,res){
                     res.end(JSON.stringify({message:"Error while reading data"}))
                 }
             }
-            const dataArr = Array.from(JSON.parse(data.toString('utf-8')))
+            const odataArr = Array.from(JSON.parse(odata.toString('utf-8')))
             //to find the index of the data with the given id
-            const index = dataArr.findIndex(i=>i.id===id)
+            const index = odataArr.findIndex(i=>i.id===id)
 
             if(index === -1){
                 res.end(JSON.stringify({message:"Item not found"}))
@@ -170,8 +162,8 @@ function updateData(req,res){
                     return res.end(JSON.stringify({message:"Enter valid data"}))
                 }
                 //update the existing data with the new data
-                dataArr[index] = {...dataArr[index],...updateditem}
-                fs.writeFile('data.json',JSON.stringify(dataArr),(err)=>{
+                odataArr[index] = {...odataArr[index],...oupdateditem}
+                fs.writeFile('data.json',JSON.stringify(odataArr),(err)=>{
                     if(err){
                         if(err.code==="ENOENT"){
                             return res.end(JSON.stringify({message:"Data not found"}))
@@ -184,7 +176,7 @@ function updateData(req,res){
 
                     event.emit('itemUpdated')
                     res.writeHead(200,{'content-type':'application/json'})
-                    res.end(JSON.stringify({message:"Data Updated Successfully",data:dataArr[index]}))
+                    res.end(JSON.stringify({message:"Data Updated Successfully",odata:odataArr[index]}))
                 })
             })
         })
@@ -203,7 +195,7 @@ function deleteData(req,res){
             res.end(JSON.stringify({message:"Invalid ID"}))
             return
         }
-        fs.readFile('data.json',(err,data)=>{
+        fs.readFile('data.json',(err,odata)=>{
             if(err){
                 if(err.code==="ENOENT"){
                     return res.end(JSON.stringify({message:"Data not found"}))
@@ -213,14 +205,14 @@ function deleteData(req,res){
                     return res.end(JSON.stringify({message:"Error while reading data"}))
                 }
             }
-            const dataArr = Array.from(JSON.parse(data.toString('utf-8')))
+            const odataArr = Array.from(JSON.parse(odata.toString('utf-8')))
             //to filter the data with the given id
-            const newdata = dataArr.filter(i=>i.id!==id)
+            const onewdata = odataArr.filter(i=>i.id!==id)
             //to check if the data is not found
-            if(newdata.length === dataArr.length){
+            if(onewdata.length === odataArr.length){
                 return res.end(JSON.stringify({message:"Item not found"}))
             }
-            fs.writeFile('data.json',JSON.stringify(newdata),(err)=>{
+            fs.writeFile('data.json',JSON.stringify(onewdata),(err)=>{
                 if(err){
                     if(err.code==="ENOENT"){
                         return res.end(JSON.stringify({message:"Data not found"}))

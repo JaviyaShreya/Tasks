@@ -1,171 +1,181 @@
 const http = require('http');
+const {writeFile, readFile} = require('fs').promises;
 const fs = require('fs');
 const url = require('url');
 const EventEmmiter = require('node:events');
 const path = require('path');
-const data = require('./data.json')
 const { v4: uuidv4, validate: uuidValidate  } = require('uuid')
-
-// const dataset =[
-//     {
-//         "id":2,
-//         "itemname":"Watch",
-//         "quantity":5, 
-//         "price":10000,
-//         "status":"Not Available",
-//         "createdAt":"22/3/25",
-//         "updatedAt":"25/3/25"
-//     },
-//     {
-//         "id":3,
-//         "itemname":"Mobile",
-//         "quantity":10,
-//         "price":20000,
-//         "status":"Available",
-//         "createdAt":"22/3/25",
-//         "updatedAt":"25/3/25"
-//     }
-// ]
-// fs.writeFile('data.json',JSON.stringify(dataset),(err)=>{
-//     if(err){
-//         console.log("Error while writing data")
-//     }
-// })
 
 const event = new EventEmmiter()
 
+function createResponse({res, nstatuscode,oData, sMessage="", bisError=false}){
+    if(bisError){
+        res.writeHead(nstatuscode, {'Content-Type': 'application/json'});
+        return res.end(JSON.stringify({"message": sMessage}));
+    }
+    else if(oData){
+        res.writeHead(nstatuscode, {'Content-Type': 'application/json'});
+        return res.end(JSON.stringify({"message": sMessage,  "data": oData}));
+    }
+    else if(sMessage){
+        res.writeHead(nstatuscode, {'Content-Type': 'application/json'});
+        return res.end(JSON.stringify({"message": sMessage}));
+    }
+}
+function validateData(res, oNewdata){
+    if(!oNewdata.sname || !oNewdata.nquantity || !oNewdata.nprice || !oNewdata.sstatus){
+        return createResponse({res, nstatuscode:400, sMessage:"Enter valid oData"})
+    }
+    else if(typeof oNewdata.sname !== 'string' || typeof oNewdata.nquantity !== 'number' || typeof oNewdata.nprice !== 'number' || typeof oNewdata.sstatus !== 'string'){
+        return createResponse({res, nstatuscode:400, sMessage:"Enter valid oData"})
+    }
+    else if(oNewdata.nquantity < 0 || oNewdata.nprice < 0){
+        return createResponse({res, nstatuscode:400, sMessage:"Enter valid oData"})
+    }
+        
+}
+function validateId(res, id){
+    if(!uuidValidate(id)){
+        return createResponse({res, nstatuscode:400, sMessage:"Invalid ID"})
+    }
+}
 const myServer = http.createServer((req,res)=>{
     console.log(req.url)
     console.log(req.method)
     console.log("server is running")
    
     //Event Listeners
-    event.on('itemCreated',()=>{
-        console.log("Item Created Successfully")
+    event.on('oItemCreated',(oData)=>{
+        console.log("oItem Created Successfully",oData)
     })
-    event.on('itemUpdated',()=>{
-        console.log("Item Updated Successfully")
+    event.on('oItemUpdated',(oData)=>{
+        console.log("oItem Updated Successfully",oData)
     })
-    event.on('itemDeleted',()=>{
-        console.log("Item Deleted Successfully")
+    event.on('oItemDeleted',(oData)=>{
+        console.log("oItem Deleted Successfully",oData)
     })
 
     //healthcheck to check if server is running
-    if(req.method === 'GET' && req.url ==="/healthcheck"){
+    switch (true) {
+    
+    case req.method === 'GET' && req.url ==="/healthcheck" :
         try{
-            res.writeHead(200,{'content-type':'application/json'})
-            return res.end(JSON.stringify({message:"Server is running"}))
+            return createResponse({res, nstatuscode:200, sMessage:"Server is running"})
         }
         catch(err){
-            res.end(err.message)
+           return createResponse({res, nstatuscode:500, sMessage:err.message, bisError:true})
         }
-    }
-    //to ge all the data
-    else if(req.method === 'GET' && req.url ==="/api/data"){
+    break;
+
+    //to get all the oData
+    case req.method === 'GET' && req.url ==="/api/data" :
         try{
-           res.writeHead(200,{'content-type':'application/json'})
-           fs.readFile('data.json',(err,data)=>{
+           fs.readFile('data.json',(err,oData)=>{
             if(err){
                 if(err.code==="ENOENT"){
-                    res.end(JSON.stringify({message:"Data not found"}))
+                    return createResponse({res, nstatuscode:404, sMessage:"Data not found"})
                 }
                 else{
-                    res.end(JSON.stringify({message:"Error while reading data"}))
+                    return createResponse({res, nstatuscode:500, sMessage:"Error while reading oData"})
                 }
             }
-            res.end(JSON.stringify(JSON.parse(data)))
+            const oDataArr = JSON.parse(oData)
+            const oNewdata = oDataArr.filter(i=>i.sstatus==="available")
+            return createResponse({res, nstatuscode:200, oData:oNewdata})
            })
         }
         catch(err){
-            res.end(err.message)
+            return createResponse({res, nstatuscode:500, sMessage:err.message, bisError:true})
         }
-    }
-    //to get data of a particular id
-    else if(req.method === 'GET' && req.url.startsWith("/api/data")){
+    break;
+    
+    //to get oData of a particular id
+    case req.method === 'GET' && req.url.startsWith("/api/data") :
         try{
             const id = req.url.split('/')[3]
             //to check if the id is valid
-            if(!uuidValidate(id)){
-                res.writeHead(400,{'content-type':'application/json'})
-                res.end(JSON.stringify({message:"Invalid ID"}))
-            }
-            fs.readFile('data.json',(err,data)=>{
+            validateId(res, id)
+            fs.readFile('data.json',(err,oData)=>{
                 if(err){
                     if(err.code==="ENOENT"){
-                        return res.end(JSON.stringify({message:"Data not found"}))
+                        return createResponse({res, nstatuscode:404, sMessage:"oData not found"})
                     }
                     else{
-                        return res.end(JSON.stringify({message:"Error while reading data"}))
+                        return createResponse({res, nstatuscode:500, sMessage:"Error while reading oData"})
                     }
                 }
-                const dataArr = JSON.parse(data)
-                //to find the data of the given id
-                const item = dataArr.find(i=>i.id===id)
-                if(item){
-                    res.writeHead(200,{'content-type':'application/json'})
-                    res.end(JSON.stringify(item))
+                const oDataArr = JSON.parse(oData)
+                //to find the oData of the given id
+                const itemIndex=oDataArr.findIndex(i=>i.id===id)
+                if(itemIndex === -1){
+                    return createResponse({res, nstatuscode:404, sMessage:"oItem not found"})
                 }
-                else{
-                    res.writeHead(404,{'content-type':'application/json'})
-                    res.end(JSON.stringify({message:"Item not found"}))         
 
+                const oItem = oDataArr.find(i=>i.id===id)
+                if(oItem){
+                    return createResponse({res, nstatuscode:200, oData:oItem})
                 }
             })
         }
         catch(err){
-            res.end(err.message)
+            return res.end(err.message)
         }
-    }
-    //to post new data
-    else if(req.method === 'POST' && req.url ==="/api/data"){
+    break;
+
+    //to post new oData
+    case req.method === 'POST' && req.url ==="/api/data" :
         try{
             
-           fs.readFile('data.json',(err,data)=>{
+           fs.readFile('data.json',(err,oData)=>{
                 if(err){
                     if(err.code==="ENOENT"){
-                        return res.end(JSON.stringify({message:"Data not found"}))
+                        return createResponse({res, nstatuscode:404, sMessage:"oData not found"})
                     }
                     else{
-                       res.writeHead(500,{'content-type':'application/json'})
-                        return res.end(JSON.stringify({message:"Error while reading data"}))
+                        return createResponse({res, nstatuscode:500, sMessage:"Error while reading oData"})
                     }
                 }
-                //store the already existing data in json file
-                const oldata = Array.from(JSON.parse(data.toString('utf-8')))
+                //store the already existing oData in json file
+                const oOldata = Array.from(JSON.parse(oData.toString('utf-8')))
                 let body = ''
             
                 req.on('data',chunk=>{
                     body+=chunk.toString()
-                })
+                }) 
+               
                 req.on('end',()=>{
                     if (!body.trim()) {  // Check if body is empty
-                        res.writeHead(400, { 'content-type': 'application/json' });
-                        return res.end(JSON.stringify({ message: "Enter valid data" }));
+                       return createResponse({res, nstatuscode:400, sMessage:"Enter valid oData"})
                     }
-                    const newdata = JSON.parse(body)
+                    try{
+                        JSON.parse(body)
+                    }
+                    catch(err){
+                        return createResponse({res, nstatuscode:400, sMessage:"Enter JSON format"})
+                    }
+                    const oNewdata = JSON.parse(body)
 
+                    validateData(res, oNewdata)
+                   
                     //to check if the object is emnpty
-                    if(Object.keys(newdata).length===0){
-                        res.writeHead(400,{'content-type':'application/json'})
-                        return res.end(JSON.stringify({message:"Enter valid data"}))
+                    if(Object.keys(oNewdata).length===0){
+                        createResponse({res, nstatuscode:400, sMessage:"Enter valid oData"})
                     }
                     //takes random id from uuid
-                    newdata.id = uuidv4()
-                    //push the new data to the existing data
-                    oldata.push(newdata)
-                  
-                    fs.writeFile('data.json',JSON.stringify(oldata),(err)=>{
+                    oNewdata.id = uuidv4()
+                    //push the new oData to the existing oData
+                    oOldata.push(oNewdata)
+                    fs.writeFile('data.json',JSON.stringify(oOldata),(err)=>{
                         if(err){
                             if(err.code==="ENOENT"){
-                                return res.end(JSON.stringify({message:"Data not found"}))
+                                return createResponse({res, nstatuscode:404, sMessage:"oData not found"})
                             }
                             else{
-                                return res.end(JSON.stringify({message:"Error while writing data"}))
+                                return createResponse({res, nstatuscode:500, sMessage:"Error while writing oData"})
                             }
                          }
-                        event.emit('itemCreated')
-                        res.writeHead(201,{'content-type':'application/json'})
-                        res.end(JSON.stringify({message:"Data Created Successfully",data:newdata}))
+                        event.emit('oItemCreated',oNewdata)                     
+                        return createResponse({res, nstatuscode:201, sMessage:"oData Created Successfully",oData:oNewdata})
                     })
                 
                 })
@@ -173,35 +183,32 @@ const myServer = http.createServer((req,res)=>{
             })
         }
         catch(err){
-            res.end(err.message)
+            return createResponse({res, nstatuscode:500, sMessage:err.message, bisError:true})
         }
-    }
-    //to update existing data
-    else if(req.method === 'PUT' && req.url.startsWith("/api/data")){
+    break;
+
+    //to update existing oData
+    case req.method === 'PUT' && req.url.startsWith("/api/data") :
         try{
             const id = req.url.split('/')[3]
             //to check if the id is valid
-            if(!uuidValidate(id)){
-                res.writeHead(400,{'content-type':'application/json'})
-                res.end(JSON.stringify({message:"Invalid ID"}))
-            }
+            validateId(res, id)
         
-            fs.readFile('data.json',(err,data)=>{
+            fs.readFile('data.json',(err,oData)=>{
                 if(err){
-                    if(err.code==="ENOENT"){
-                        res.end(JSON.stringify({message:"Data not found"}))
+                    if(err.code==="ENOENT"){    
+                        return createResponse({res, nstatuscode:404, sMessage:"oData not found"})
                     }
                     else{
-                        res.writeHead(500,{'content-type':'application/json'})
-                        res.end(JSON.stringify({message:"Error while reading data"}))
+                        return createResponse({res, nstatuscode:500, sMessage:"Error while reading oData"})
                     }
                 }
-                const dataArr = Array.from(JSON.parse(data.toString('utf-8')))
-                //to find the index of the data with the given id
-                const index = dataArr.findIndex(i=>i.id===id)
+                const oDataArr = Array.from(JSON.parse(oData.toString('utf-8')))
+                //to find the nIndex of the oData with the given id
+                const nIndex = oDataArr.findIndex(i=>i.id===id)
 
-                if(index === -1){
-                    res.end(JSON.stringify({message:"Item not found"}))
+                if(nIndex === -1){
+                    return createResponse({res, nstatuscode:404, sMessage:"oItem not found"})
                 }
                 let body = ''
                 req.on('data',chunk=>{
@@ -210,90 +217,88 @@ const myServer = http.createServer((req,res)=>{
                 req.on('end',()=>{
                     //to check if the body is empty
                     if(!body.trim()){
-                        res.writeHead(400,{'content-type':'application/json'})
-                        return res.end(JSON.stringify({message:"Enter valid data"}))
+                        return createResponse({res, nstatuscode:400, sMessage:"Enter valid oData"})
                     }
-                    const updateditem = JSON.parse(body)
+                    const updatedoItem = JSON.parse(body)
                     //to check if the object is empty
-                    if(Object.keys(updateditem).length===0){
-                        res.writeHead(400,{'content-type':'application/json'})
-                        return res.end(JSON.stringify({message:"Enter valid data"}))
+                    if(Object.keys(updatedoItem).length===0){
+                        return createResponse({res, nstatuscode:400, sMessage:"Enter valid oData"})
                     }
-                    //update the existing data with the new data
-                    dataArr[index] = {...dataArr[index],...updateditem}
-                    fs.writeFile('data.json',JSON.stringify(dataArr),(err)=>{
+                    //update the existing oData with the new oData
+                    oDataArr[nIndex] = {...oDataArr[nIndex],...updatedoItem}
+                    fs.writeFile('oData.json',JSON.stringify(oDataArr),(err)=>{
                         if(err){
                             if(err.code==="ENOENT"){
-                                return res.end(JSON.stringify({message:"Data not found"}))
+                                return createResponse({res, nstatuscode:404, sMessage:"oData not found"})
                             }
                             else{
                                 res.writeHead(500,{'content-type':'application/json'})
-                                return res.end(JSON.stringify({message:"Error while writing data"}))
+                                return createResponse({res, nstatuscode:500, sMessage:"Error while writing oData"})
                             }
                         }
 
-                        event.emit('itemUpdated')
-                        res.writeHead(200,{'content-type':'application/json'})
-                        res.end(JSON.stringify({message:"Data Updated Successfully",data:dataArr[index]}))
+                        event.emit('oItemUpdated',oDataArr[nIndex])
+                        return createResponse({res, nstatuscode:200, sMessage:"Data Updated Successfully",oData:oDataArr[nIndex]})
                     })
-
-
                 })
             })
             
         }
         catch(err){
-            res.end(err.message)
+            return res.end(err.message)
         }
-    }
-    //to delete data
-    else if(req.method === 'DELETE' && req.url.startsWith("/api/data")){
+    break;
+
+    //to delete oData
+    case req.method === 'DELETE' && req.url.startsWith("/api/data") :
         try{
             const id = req.url.split('/')[3] 
-            if(!uuidValidate(id)){
-                res.writeHead(400,{'content-type':'application/json'})
-                res.end(JSON.stringify({message:"Invalid ID"}))
-            }
-            fs.readFile('data.json',(err,data)=>{
+            validateId(res, id)
+            fs.readFile('data.json',(err,oData)=>{
                 if(err){
                     if(err.code==="ENOENT"){
-                        return res.end(JSON.stringify({message:"Data not found"}))
+                        return createResponse({res, nstatuscode:404, sMessage:"oData not found"})
                     }
                     else{
                         res.writeHead(500,{'content-type':'application/json'})
-                        return res.end(JSON.stringify({message:"Error while reading data"}))
+                        return createResponse({res, nstatuscode:500, sMessage:"Error while reading oData"})
                     }
                 }
-                const dataArr = Array.from(JSON.parse(data.toString('utf-8')))
-                //to filter the data with the given id
-                const newdata = dataArr.filter(i=>i.id!==id)
-                //to check if the data is not found
-                if(newdata.length === dataArr.length){
-                    return res.end(JSON.stringify({message:"Item not found"}))
+                const oDataArr = Array.from(JSON.parse(oData.toString('utf-8')))
+                const oDeletedata = oDataArr.find(i=>i.id===id)
+
+                //to filter the oData with the given id
+                const oNewdata = oDataArr.filter(i=>i.id!==id)
+                console.log(oNewdata)
+                //to check if the oData is not found
+                const itemIndex=oDataArr.findIndex(i=>i.id===id)
+                if(itemIndex === -1){
+                    return createResponse({res, nstatuscode:404, sMessage:"oItem not found"})
                 }
-                fs.writeFile('data.json',JSON.stringify(newdata),(err)=>{
+                
+                fs.writeFile('data.json',JSON.stringify(oNewdata),(err)=>{
                     if(err){
                         if(err.code==="ENOENT"){
-                            return res.end(JSON.stringify({message:"Data not found"}))
+                            return createResponse({res, nstatuscode:404, sMessage:"oData not found"})
                         }
                         else{
                             res.writeHead(500,{'content-type':'application/json'})
-                            return res.end(JSON.stringify({message:"Error while writing data"}))
+                            return createResponse({res, nstatuscode:500, sMessage:"Error while writing oData"})
                         }
                     }
-                    event.emit('itemDeleted')
-                    res.writeHead(200,{'content-type':'application/json'})
-                    res.end(JSON.stringify({message:"Data Deleted Successfully"}))
+                    event.emit('oItemDeleted',oDeletedata)
+                    createResponse({res, nstatuscode:200, sMessage:"oData Deleted Successfully"})
                 })
             })
           
         }
         catch(err){
-            res.end(err.message)
+            return createResponse({res, nstatuscode:500, sMessage:err.message, bisError:true})
         }
-    }
+    break;
+
     //to serve static files
-    else if(req.url.startsWith('/public') && req.method === 'GET'){
+    case req.url.startsWith('/public') && req.method === 'GET' :
         let filepath=req.url
         console.log(filepath)
         let extname = String(path.extname(filepath)).toLowerCase();
@@ -311,24 +316,27 @@ const myServer = http.createServer((req,res)=>{
               
             let contentType = mime[extname] || 'application/octet-stream';
         
-        fs.readFile(filepath.slice(1), (err, data) => {
+        fs.readFile(filepath.slice(1), (err, oData) => {
             if(err){
                 if(err.code == 'ENOENT'){
-                        res.writeHead(200, {'Content-Type': 'text/html'});
-                        res.end('File not found!');
+                    res.writeHead(200, {'Content-Type': 'text/html'});
+                    return res.end('File not found!');
                 }
                 else{
                     res.writeHead(500)
-                    res.end('server error', err.code)
+                    return res.end('server error', err.code)
                 }
             }
             else{
                 res.writeHead(200, {'Content-Type': contentType});
-                res.end(data, 'utf8');
+                return res.end(oData, 'utf8');
             }
         })
+    break;
+
+    default:
+        return createResponse({res, nstatuscode:404, sMessage:"Route not found"})
     }
-        
     
 })
 //to listen to the server

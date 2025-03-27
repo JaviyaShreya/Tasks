@@ -1,8 +1,24 @@
+const fs = require('fs');
+const path = require('path');
+
+function servedefault(req,res){
+    fs.readFile('public/index.html', (err, odata) => {
+        if(err){
+            res.writeHead(500)
+            res.end('server error', err.code)
+        }
+        else{
+            res.writeHead(200, {'Content-Type': 'text/html'});
+            res.end(odata, 'utf8');
+        }
+    })
+}
+
 function servePublic(req,res){
-    const filepath = path.join(__dirname, '../public', req.url);
+    const filepath = req.url
     console.log(filepath)
-    let extname = String(path.extname(filepath)).toLowerCase();
-    const mime = {
+    let sextname = String(path.extname(filepath)).toLowerCase();
+    const omime = {
         ".html": "text/html",
         ".css": "text/css",
         ".js": "text/javascript",
@@ -14,8 +30,8 @@ function servePublic(req,res){
         ".ico": "image/x-icon"
     }
               
-    let contentType = mime[extname] || 'application/octet-stream';
-    fs.readFile(filepath.slice(1), (err, data) => {
+    let contentType = omime[sextname] || 'application/octet-stream';
+    fs.readFile(filepath.slice(1), (err, odata) => {
         if(err){
             if(err.code == 'ENOENT'){
                 res.writeHead(200, {'Content-Type': 'text/html'});
@@ -28,10 +44,10 @@ function servePublic(req,res){
         }
         else{
             res.writeHead(200, {'Content-Type': contentType});
-            res.end(data, 'utf8');
+            res.end(odata, 'utf8');
         }
     })
 }
 
-module.exports = {servePublic}
+module.exports = {servePublic, servedefault}
 

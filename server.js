@@ -19,17 +19,14 @@ const myServer = http.createServer((req,res)=>{
             res.end(err.message)
         }
     }
-    if (!publicroutes(req, res) && !dataroutes(req, res)) {
-        res.writeHead(404, { 'content-type': 'application/json' });
-        return res.end(JSON.stringify({ message: "Route not found" }));
-    }
+    
     // else{
     //     res.writeHead(404,{'Content-Type':'application/json'})
     //     res.end(JSON.stringify({message:"Route not found"}))
     // }
     
-    // publicroutes(req,res)
-    // dataroutes(req,res)
+    publicroutes(req,res)
+    dataroutes(req,res)
     
 })
 //to listen to the server

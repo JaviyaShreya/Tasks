@@ -3,14 +3,14 @@ const EventEmmiter = require('node:events');
 const event = new EventEmmiter()
 
 //Event Listeners
-event.on('itemCreated',()=>{
-    console.log("Item Created Successfully")
+event.on('itemCreated',(odata)=>{
+    console.log("Item Created Successfully",odata)
 })
-event.on('itemUpdated',()=>{
-    console.log("Item Updated Successfully")
+event.on('itemUpdated',(odata)=>{
+    console.log("Item Updated Successfully",odata)
 })
-event.on('itemDeleted',()=>{
-    console.log("Item Deleted Successfully")
+event.on('itemDeleted',(odata)=>{
+    console.log("Item Deleted Successfully",odata)
 })
 
 module.exports = {event}
